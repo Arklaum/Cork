@@ -3,7 +3,6 @@
 name: Build Cork App
 
 on:
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
@@ -17,15 +16,12 @@ jobs:
 
       - name: 2. Select Xcode
         run: |
-          # Use the correct path found on the runner
           sudo xcode-select -s /Applications/Xcode_16.2.app
           xcodebuild -version
 
       - name: 3. Install and set up Mise
         run: |
-          # Install mise
           curl https://mise.run | sh
-          # Add mise to the PATH for subsequent steps
           echo "$HOME/.local/bin" >> $GITHUB_PATH
       
       - name: 4. Install Tuist via Mise
@@ -33,9 +29,7 @@ jobs:
 
       - name: 5. Generate Xcode Project
         run: |
-          # Trust the local config to prevent interactive prompts
           mise trust
-          # Run the generation command from the documentation
           mise exec tuist@4.25.0 -- tuist install
           mise exec tuist@4.25.0 -- tuist generate --no-binary-cache
 
@@ -60,7 +54,8 @@ jobs:
 
       - name: 7. Archive the App
         run: |
-          xcodebuild archive \
+          # Add the -skipPackagePluginValidation flag to trust the SwiftLint plugin
+          xcodebuild archive -skipPackagePluginValidation \
             -workspace Cork.xcworkspace \
             -scheme "Self-Compiled" \
             -sdk macosx \
