@@ -1,24 +1,24 @@
-name: Build Cork App
+name: Build Cork App (Alternative)
 on:
   workflow_dispatch:
 jobs:
   build-macos:
-    name: Build Cork for macOS
-    runs-on: macos-latest 
+    name: Build Cork for macOS (Xcode 15)
+    runs-on: macos-13  # Use macOS 13 which has Xcode 15
     steps:
       - name: 1. Checkout repository
         uses: actions/checkout@v4
         
-      - name: 2. Select Xcode
+      - name: 2. Select Xcode 15
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.2.app
+          # Use Xcode 15 which should support the template format better
+          sudo xcode-select -s /Applications/Xcode_15.2.app
           xcodebuild -version
           
       - name: 3. Install and set up Mise
         run: |
           curl https://mise.run | sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
-          # Activate mise in the current shell
           eval "$($HOME/.local/bin/mise activate bash)"
       
       - name: 4. Install Tuist via Mise
@@ -52,85 +52,33 @@ jobs:
           </plist>
           EOF
           
-      - name: 7. Debug - List workspace contents
-        run: |
-          ls -la
-          find . -name "*.xcworkspace" -o -name "*.xcodeproj"
-          if [ -f "Cork.xcworkspace" ]; then
-            echo "Cork.xcworkspace found"
-          else
-            echo "Cork.xcworkspace not found"
-          fi
-          
-      - name: 8. Clean build folder
+      - name: 7. Clean build folder
         run: |
           rm -rf ./build
           mkdir -p ./build
           
-      - name: 9. Archive the App
+      - name: 8. Archive the App
         run: |
-          # Use additional build settings to resolve asset catalog issues
           xcodebuild archive -skipPackagePluginValidation \
             -workspace Cork.xcworkspace \
             -scheme "Self-Compiled" \
             -sdk macosx \
             -configuration Release \
             -archivePath ./build/Cork.xcarchive \
-            -destination "platform=macOS,arch=arm64" \
-            ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO \
-            ASSETCATALOG_COMPILER_OPTIMIZATION=time \
-            VALIDATE_WORKSPACE=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            DEVELOPMENT_TEAM="" \
             | tee build.log
             
-      - name: 10. Check archive contents
-        run: |
-          if [ -d "./build/Cork.xcarchive" ]; then
-            echo "Archive created successfully"
-            ls -la ./build/Cork.xcarchive/
-          else
-            echo "Archive not found, checking build log:"
-            cat build.log || echo "No build log found"
-            exit 1
-          fi
-          
-      - name: 11. Export the App
+      - name: 9. Export the App
         run: |
           xcodebuild -exportArchive \
             -archivePath ./build/Cork.xcarchive \
             -exportPath ./build \
-            -exportOptionsPlist ExportOptions.plist \
-            | tee export.log
+            -exportOptionsPlist ExportOptions.plist
             
-      - name: 12. Verify exported app
-        run: |
-          if [ -d "./build/Cork.app" ]; then
-            echo "App exported successfully"
-            ls -la ./build/Cork.app/
-          else
-            echo "App not found, checking export log:"
-            cat export.log || echo "No export log found"
-            echo "Contents of build directory:"
-            ls -la ./build/
-            exit 1
-          fi
-          
-      - name: 13. Upload build logs (on failure)
-        if: failure()
+      - name: 10. Upload App as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-logs
-          path: |
-            build.log
-            export.log
-          retention-days: 7
-          
-      - name: 14. Upload App as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Cork-App
+          name: Cork-App-Xcode15
           path: ./build/Cork.app
