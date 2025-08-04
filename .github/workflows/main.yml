@@ -54,13 +54,14 @@ jobs:
 
       - name: 7. Archive the App
         run: |
-          # Add the -skipPackagePluginValidation flag to trust the SwiftLint plugin
+          # Add ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO to work around the asset template format error
           xcodebuild archive -skipPackagePluginValidation \
             -workspace Cork.xcworkspace \
             -scheme "Self-Compiled" \
             -sdk macosx \
             -configuration Release \
-            -archivePath ./build/Cork.xcarchive
+            -archivePath ./build/Cork.xcarchive \
+            ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO
 
       - name: 8. Export the App
         run: |
