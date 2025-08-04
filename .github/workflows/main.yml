@@ -1,0 +1,86 @@
+# .github/workflows/build.yml
+
+name: Build Cork App
+
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+  # You can also trigger it on pushes to your main branch, for example:
+  # push:
+  #   branches: [ "main" ]
+
+jobs:
+  build-macos:
+    name: Build Cork for macOS
+    # Use a macOS runner that has Xcode 16. As of late 2024/early 2025, macos-14 or newer should have it.
+    runs-on: macos-14 
+
+    steps:
+      - name: 1. Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 2. Select Xcode 16
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.0.app
+          xcodebuild -version
+
+      - name: 3. Install and set up Mise
+        run: |
+          # Install mise
+          curl https://mise.run | sh
+          # Add mise to the PATH for subsequent steps
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      
+      - name: 4. Install Tuist via Mise
+        run: mise install tuist
+
+      - name: 5. Generate Xcode Project
+        run: |
+          # Trust the local config to prevent interactive prompts
+          mise trust
+          # Run the generation command from the documentation
+          mise exec tuist@4.25.0 -- tuist install
+          mise exec tuist@4.25.0 -- tuist generate --no-binary-cache
+
+      - name: 6. Create Export Options Plist
+        run: |
+          # This plist automates the "Distribute App -> Custom -> Copy App" step.
+          # It uses local ad-hoc signing as described in the manual instructions.
+          cat > ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>copy</string>
+              <key>destination</key>
+              <string>export</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>signingCertificate</key>
+              <string>Sign to Run Locally</string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: 7. Archive the App
+        run: |
+          xcodebuild archive \
+            -workspace Cork.xcworkspace \
+            -scheme "Self-Compiled" \
+            -sdk macosx \
+            -configuration Release \
+            -archivePath ./build/Cork.xcarchive
+
+      - name: 8. Export the App
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath ./build/Cork.xcarchive \
+            -exportPath ./build \
+            -exportOptionsPlist ExportOptions.plist
+
+      - name: 9. Upload App as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cork-App
+          path: ./build/Cork.app
