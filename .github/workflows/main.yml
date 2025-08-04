@@ -14,7 +14,6 @@ jobs:
 
       - name: 2. Select latest available Xcode
         run: |
-          # Use the latest available Xcode version on the runner to maximize compatibility
           sudo xcode-select -s /Applications/$(ls /Applications | grep Xcode | tail -n 1)
           echo "Using $(xcode-select -p)"
           xcodebuild -version
@@ -93,8 +92,14 @@ jobs:
             -exportPath ./build \
             -exportOptionsPlist ExportOptions.plist
 
-      - name: 10. Upload App as Artifact
+      - name: 10. Create macOS-compatible Zip Archive
+        run: |
+          cd ./build
+          ditto -c -k --sequesterRsrc --keepParent Cork.app Cork-App.zip
+          cd ..
+      
+      - name: 11. Upload App as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Cork-App
-          path: ./build/Cork.app
+          path: ./build/Cork-App.zip
