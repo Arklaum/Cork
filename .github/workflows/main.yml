@@ -38,7 +38,7 @@ jobs:
           echo "Applying workaround for incompatible asset catalog symbols..."
           ASSETS_PATH="Cork/Assets.xcassets"
           
-          # List of symbol sets that cause the build to fail
+          # List of symbol sets that cause the build to fail due to incompatible template formats
           PROBLEMATIC_SYMBOLS=(
             "custom.shippingbox.badge.magnifyingglass.symbolset"
             "custom.macwindow.badge.xmark.symbolset"
@@ -66,7 +66,7 @@ jobs:
           <plist version="1.0">
           <dict>
               <key>method</key>
-              <string>copy</string>
+              <string>mac-application</string>
               <key>destination</key>
               <string>export</string>
               <key>signingStyle</key>
