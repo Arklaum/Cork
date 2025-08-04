@@ -47,80 +47,60 @@ jobs:
           echo "Fixing Asset Catalog template format issues..."
           
           # Create a Python script to downgrade SVG template formats
-          cat > fix_svg_templates.py << 'EOF'
-import os
-import xml.etree.ElementTree as ET
-import sys
-
-def fix_svg_file(filepath):
-    """Fix SVG template format version in SF Symbol files"""
-    try:
-        # Read the SVG file
-        with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
-        
-        # Parse as XML
-        root = ET.fromstring(content)
-        
-        # Look for template format in metadata or other elements
-        # This is a simple string replacement approach since the exact XML structure varies
-        if 'templateFormat="6.0"' in content:
-            print(f"Fixing template format in {filepath}")
-            # Replace template format 6.0 with 5.0
-            fixed_content = content.replace('templateFormat="6.0"', 'templateFormat="5.0"')
-            
-            # Write back the fixed content
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(fixed_content)
-            return True
-        return False
-    except Exception as e:
-        print(f"Error processing {filepath}: {e}")
-        return False
-
-def main():
-    assets_path = "Cork/Assets.xcassets"
-    if not os.path.exists(assets_path):
-        print(f"Assets directory not found: {assets_path}")
-        return
-    
-    fixed_count = 0
-    
-    # Walk through all .symbolset directories
-    for root, dirs, files in os.walk(assets_path):
-        if root.endswith('.symbolset') and any('custom.' in root for custom in ['custom.']):
-            print(f"Checking symbolset: {root}")
-            
-            # Look for SVG files in the symbolset
-            for file in files:
-                if file.endswith('.svg'):
-                    svg_path = os.path.join(root, file)
-                    if fix_svg_file(svg_path):
-                        fixed_count += 1
-    
-    print(f"Fixed {fixed_count} SVG files")
-
-if __name__ == "__main__":
-    main()
-EOF
+          cat > fix_svg_templates.py << 'PYTHONEOF'
+          import os
+          import sys
+          
+          def fix_svg_file(filepath):
+              try:
+                  with open(filepath, 'r', encoding='utf-8') as f:
+                      content = f.read()
+                  
+                  if 'templateFormat="6.0"' in content:
+                      print(f"Fixing template format in {filepath}")
+                      fixed_content = content.replace('templateFormat="6.0"', 'templateFormat="5.0"')
+                      
+                      with open(filepath, 'w', encoding='utf-8') as f:
+                          f.write(fixed_content)
+                      return True
+                  return False
+              except Exception as e:
+                  print(f"Error processing {filepath}: {e}")
+                  return False
+          
+          def main():
+              assets_path = "Cork/Assets.xcassets"
+              if not os.path.exists(assets_path):
+                  print(f"Assets directory not found: {assets_path}")
+                  return
+              
+              fixed_count = 0
+              
+              for root, dirs, files in os.walk(assets_path):
+                  if root.endswith('.symbolset') and 'custom.' in root:
+                      print(f"Checking symbolset: {root}")
+                      
+                      for file in files:
+                          if file.endswith('.svg'):
+                              svg_path = os.path.join(root, file)
+                              if fix_svg_file(svg_path):
+                                  fixed_count += 1
+              
+              print(f"Fixed {fixed_count} SVG files")
+          
+          if __name__ == "__main__":
+              main()
+          PYTHONEOF
           
           # Run the Python script to fix SVG template formats
           python3 fix_svg_templates.py
           
           # Alternative approach: Create empty placeholder Contents.json for problematic symbolsets
-          # This prevents the build from failing while keeping the symbolsets in place
           ASSETS_PATH="Cork/Assets.xcassets"
-          PROBLEMATIC_SYMBOLS=(
-            "custom.shippingbox.badge.magnifyingglass.symbolset"
-            "custom.macwindow.badge.xmark.symbolset"
-            "custom.spigot.badge.xmark.symbolset"
-            "custom.macwindow.badge.magnifyingglass.symbolset"
-            "custom.apple.terminal.badge.magnifyingglass.symbolset"
-            "custom.trash.triangle.fill.symbolset"
-            "custom.terminal.badge.xmark.symbolset"
-          )
           
-          for symbol in "${PROBLEMATIC_SYMBOLS[@]}"; do
+          # Array of problematic symbols
+          echo "Processing problematic symbol sets..."
+          for symbol in "custom.shippingbox.badge.magnifyingglass.symbolset" "custom.macwindow.badge.xmark.symbolset" "custom.spigot.badge.xmark.symbolset" "custom.macwindow.badge.magnifyingglass.symbolset" "custom.apple.terminal.badge.magnifyingglass.symbolset" "custom.trash.triangle.fill.symbolset" "custom.terminal.badge.xmark.symbolset"; do
             symbol_path="$ASSETS_PATH/$symbol"
             if [ -d "$symbol_path" ]; then
               echo "Processing $symbol"
@@ -181,7 +161,7 @@ JSONEOF
             -sdk macosx \
             -configuration Release \
             -archivePath ./build/Cork.xcarchive \
-            -destination "platform=macOS,arch=x86_64" \
+            -destination "platform=macOS,arch=arm64" \
             ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO \
             ASSETCATALOG_COMPILER_OPTIMIZATION=time \
             VALIDATE_WORKSPACE=NO \
